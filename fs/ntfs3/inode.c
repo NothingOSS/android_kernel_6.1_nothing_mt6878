@@ -73,21 +73,9 @@ static struct inode *ntfs_read_mft(struct inode *inode,
 
 	rec = ni->mi.mrec;
 
-	if (sbi->flags & NTFS_FLAGS_LOG_REPLAYING) {
-		;
-	} else if (ref->seq != rec->seq) {
-		err = -EINVAL;
-		ntfs_err(sb, "MFT: r=%lx, expect seq=%x instead of %x!", ino,
-			 le16_to_cpu(ref->seq), le16_to_cpu(rec->seq));
-		goto out;
-	} else if (!is_rec_inuse(rec)) {
-		err = -ESTALE;
-		ntfs_err(sb, "Inode r=%x is not in use!", (u32)ino);
-		goto out;
-	}
-
 	if (le32_to_cpu(rec->total) != sbi->record_size) {
 		/* Bad inode? */
+		ntfs_err(sb, "May bad inode %u %u", le32_to_cpu(rec->total) , sbi->record_size);
 		err = -EINVAL;
 		goto out;
 	}
@@ -370,8 +358,10 @@ next_attr:
 			 * ntfs_get_wsl_perm updates inode->i_uid, inode->i_gid, inode->i_mode
 			 */
 			inode->i_mode = mode;
-			ntfs_get_wsl_perm(inode);
-			mode = inode->i_mode;
+			inode->i_uid = sbi->options->fs_uid;
+			inode->i_gid = sbi->options->fs_gid;
+			/*ntfs_get_wsl_perm(inode);
+			mode = inode->i_mode;*/
 		}
 		goto next_attr;
 
@@ -1626,7 +1616,10 @@ struct inode *ntfs_create_inode(struct user_namespace *mnt_userns,
 	 */
 	d_instantiate(dentry, inode);
 
-	ntfs_save_wsl_perm(inode);
+	//ntfs_save_wsl_perm(inode);
+	inode->i_mode |= (0777 & sbi->options->fs_fmask_inv);
+	inode->i_uid = sbi->options->fs_uid;
+	inode->i_gid = sbi->options->fs_gid;
 	mark_inode_dirty(dir);
 	mark_inode_dirty(inode);
 

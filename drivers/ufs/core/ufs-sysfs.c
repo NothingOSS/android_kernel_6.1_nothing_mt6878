@@ -11,6 +11,7 @@
 #include "ufshcd-priv.h"
 
 #include <trace/hooks/ufshcd.h>
+#define QUERY_DESC_GEOMETRY_MAX_SIZE    0x44f
 
 static const char *ufshcd_uic_link_state_to_string(
 			enum uic_link_state state)
@@ -63,6 +64,57 @@ static inline ssize_t ufs_sysfs_pm_lvl_store(struct device *dev,
 		hba->spm_lvl = value;
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 	return count;
+}
+
+int ufshcd_read_geometry_desc(struct ufs_hba *hba, u8 *buf, u32 size)
+{
+
+	int ret;
+
+	down(&hba->host_sem);
+        if (!ufshcd_is_user_access_allowed(hba)) {
+                  ret = -EBUSY;
+                  goto out;
+        }
+        ufshcd_rpm_get_sync(hba);
+        ret = ufshcd_read_desc_param(hba, QUERY_DESC_IDN_GEOMETRY, 0, 0, buf, size);
+        ufshcd_rpm_put_sync(hba);
+
+out:
+	up(&hba->host_sem);
+        return ret;
+}
+int ufs_get_geometry_info(struct device *dev)
+{
+
+	struct ufs_hba *hba = dev_get_drvdata(dev);
+        int err;
+        uint8_t desc_buf[QUERY_DESC_GEOMETRY_MAX_SIZE];
+        u64 total_raw_device_capacity;
+        err = ufshcd_read_geometry_desc(hba, desc_buf, QUERY_DESC_GEOMETRY_MAX_SIZE);
+        if (err) {
+                dev_err(hba->dev, "%s: Failed getting geometry info\n", __func__);
+                goto out;
+        }
+        total_raw_device_capacity =
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 0] << 56 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 1] << 48 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 2] << 40 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 3] << 32 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 4] << 24 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 5] << 16 |
+                (u64)desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 6] << 8 |
+                desc_buf[GEOMETRY_DESC_PARAM_DEV_CAP + 7] << 0;
+		return total_raw_device_capacity;
+out:
+        return -EINVAL;
+}
+static ssize_t capacity_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	u64 total_raw_device_capacity;
+	total_raw_device_capacity = ufs_get_geometry_info(dev);
+	return sysfs_emit(buf, "%llu\n", total_raw_device_capacity);
 }
 
 static ssize_t rpm_lvl_show(struct device *dev,
@@ -300,6 +352,7 @@ out:
 	return res < 0 ? res : count;
 }
 
+static DEVICE_ATTR_RO(capacity);
 static DEVICE_ATTR_RW(rpm_lvl);
 static DEVICE_ATTR_RO(rpm_target_dev_state);
 static DEVICE_ATTR_RO(rpm_target_link_state);
@@ -320,6 +373,7 @@ static struct attribute *ufs_sysfs_ufshcd_attrs[] = {
 	&dev_attr_auto_hibern8.attr,
 	&dev_attr_wb_on.attr,
 	&dev_attr_enable_wb_buf_flush.attr,
+	&dev_attr_capacity.attr,
 	NULL
 };
 
@@ -606,7 +660,6 @@ static ssize_t ufs_sysfs_read_desc_param(struct ufs_hba *hba,
 {
 	u8 desc_buf[8] = {0};
 	int ret;
-
 	if (param_size > 8)
 		return -EINVAL;
 
@@ -624,7 +677,7 @@ static ssize_t ufs_sysfs_read_desc_param(struct ufs_hba *hba,
 		ret = -EINVAL;
 		goto out;
 	}
-
+        
 	switch (param_size) {
 	case 1:
 		ret = sysfs_emit(sysfs_buf, "0x%02X\n", *desc_buf);

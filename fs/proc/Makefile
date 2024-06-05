@@ -19,6 +19,7 @@ proc-y	+= devices.o
 proc-y	+= interrupts.o
 proc-y	+= loadavg.o
 proc-y	+= meminfo.o
+proc-y  += memcap.o
 proc-y	+= stat.o
 proc-y	+= uptime.o
 proc-y	+= util.o
