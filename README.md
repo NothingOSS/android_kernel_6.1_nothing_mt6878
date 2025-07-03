@@ -5,6 +5,9 @@
 2. OS 3.2 (Galaga-V3.2-250526-1427)
   - No update
 
+3. OS 3.2 (Galaga-V3.2-250605-1102)
+  - No update
+
 # How do I submit patches to Android Common Kernels
 
 1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
