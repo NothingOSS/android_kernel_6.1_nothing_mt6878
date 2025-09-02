@@ -388,6 +388,23 @@ static void __do_kernel_fault(unsigned long addr, unsigned long esr,
 	if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
 		return;
 
+#if defined(CONFIG_MTK_MTE_DEBUG) && defined(CONFIG_KASAN_HW_TAGS)
+	/*
+	 * Check for false alarms
+	 */
+	if (system_supports_mte() && is_el1_mte_sync_tag_check_fault(esr)) {
+		u8 ptr_tag = arch_kasan_get_tag(addr);
+		u8 mem_tag = arch_get_mem_tag((void *)addr);
+
+		if (mem_tag == 0xF0 || ptr_tag == mem_tag) {
+			pr_info("This is MTE false alarm!\n");
+			pr_info("[MTE] ptr = 0x%lx, ESR = 0x%lx", addr, esr);
+			pr_info("[MTE] ptr_tag = 0x%02x, mem_tag = 0x%02x\n",
+				ptr_tag, mem_tag);
+		}
+	}
+#endif
+
 	if (WARN_RATELIMIT(is_spurious_el1_translation_fault(addr, esr, regs),
 	    "Ignoring spurious kernel translation fault at virtual address %016lx\n", addr))
 		return;
