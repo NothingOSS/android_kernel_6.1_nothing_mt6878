@@ -68,9 +68,6 @@
 #include <linux/kprobes.h>
 #include <linux/rethook.h>
 #include <linux/sysfs.h>
-#if IS_ENABLED(CONFIG_MTK_MBRAINK_EXPORT_DEPENDED)
-#include <trace/hooks/sched.h>
-#endif
 
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
@@ -431,7 +428,7 @@ static void coredump_task_exit(struct task_struct *tsk)
 			complete(&core_state->startup);
 
 		for (;;) {
-			set_current_state(TASK_UNINTERRUPTIBLE|TASK_FREEZABLE);
+			set_current_state(TASK_IDLE|TASK_FREEZABLE);
 			if (!self.task) /* see coredump_finish() */
 				break;
 			schedule();
@@ -863,10 +860,6 @@ void __noreturn do_exit(long code)
 
 	tsk->exit_code = code;
 	taskstats_exit(tsk, group_dead);
-
-#if IS_ENABLED(CONFIG_MTK_MBRAINK_EXPORT_DEPENDED)
-	trace_android_vh_do_exit(tsk);
-#endif
 
 	exit_mm();
 

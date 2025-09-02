@@ -93,10 +93,6 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_set_wake_flags);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_find_new_ilb);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_find_energy_efficient_cpu);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_sched_pelt_multiplier);
-#if IS_ENABLED(CONFIG_MTK_MBRAINK_EXPORT_DEPENDED)
-EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_do_fork);
-EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_do_exit);
-#endif
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_map_util_freq);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_set_cpus_allowed_comm);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_sched_setaffinity_early);

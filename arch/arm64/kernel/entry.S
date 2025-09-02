@@ -178,7 +178,11 @@ alternative_else_nop_endif
 alternative_cb	ARM64_ALWAYS_SYSTEM, kasan_hw_tags_enable
 	b	1f
 alternative_cb_end
+#ifdef CONFIG_MTK_MTE_DEBUG
+	ldr	\tmp, =KERNEL_GCR_EL1
+#else
 	mov	\tmp, KERNEL_GCR_EL1
+#endif
 	msr_s	SYS_GCR_EL1, \tmp
 1:
 #endif

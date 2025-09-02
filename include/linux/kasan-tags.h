@@ -7,7 +7,11 @@
 #define KASAN_TAG_MAX		0xFD /* maximum value for random tags */
 
 #ifdef CONFIG_KASAN_HW_TAGS
+#ifdef CONFIG_MTK_MTE_DEBUG
+#define KASAN_TAG_MIN		0xF1 /* minimum value for random tags */
+#else
 #define KASAN_TAG_MIN		0xF0 /* minimum value for random tags */
+#endif
 #else
 #define KASAN_TAG_MIN		0x00 /* minimum value for random tags */
 #endif

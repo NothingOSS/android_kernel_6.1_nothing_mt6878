@@ -195,7 +195,7 @@ static void *pack_shadow(int memcgid, pg_data_t *pgdat, unsigned long eviction,
 	return xa_mk_value(eviction);
 }
 
-static void unpack_shadow(void *shadow, int *memcgidp, pg_data_t **pgdat,
+void unpack_shadow(void *shadow, int *memcgidp, pg_data_t **pgdat,
 			  unsigned long *evictionp, bool *workingsetp)
 {
 	unsigned long entry = xa_to_value(shadow);
@@ -214,6 +214,7 @@ static void unpack_shadow(void *shadow, int *memcgidp, pg_data_t **pgdat,
 	*evictionp = entry;
 	*workingsetp = workingset;
 }
+EXPORT_SYMBOL_GPL(unpack_shadow);
 
 #ifdef CONFIG_LRU_GEN
 
@@ -408,6 +409,9 @@ void workingset_refault(struct folio *folio, void *shadow)
 	unpack_shadow(shadow, &memcgid, &pgdat, &eviction, &workingset);
 	eviction <<= bucket_order;
 
+	/* Flush stats (and potentially sleep) before holding RCU read lock */
+	mem_cgroup_flush_stats_ratelimited();
+
 	rcu_read_lock();
 	/*
 	 * Look up the memcg associated with the stored ID. It might
@@ -462,8 +466,6 @@ void workingset_refault(struct folio *folio, void *shadow)
 	lruvec = mem_cgroup_lruvec(memcg, pgdat);
 
 	mod_lruvec_state(lruvec, WORKINGSET_REFAULT_BASE + file, nr);
-
-	mem_cgroup_flush_stats_delayed();
 	/*
 	 * Compare the distance to the existing workingset size. We
 	 * don't activate pages that couldn't stay resident even if
