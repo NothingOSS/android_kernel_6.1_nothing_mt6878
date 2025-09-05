@@ -101,9 +101,9 @@ static struct hid_field *hid_register_field(struct hid_report *report, unsigned 
 		return NULL;
 	}
 
-	field = kzalloc((sizeof(struct hid_field) +
-			 usages * sizeof(struct hid_usage) +
-			 3 * usages * sizeof(unsigned int)), GFP_KERNEL);
+	field = kvzalloc((sizeof(struct hid_field) +
+			  usages * sizeof(struct hid_usage) +
+			  3 * usages * sizeof(unsigned int)), GFP_KERNEL);
 	if (!field)
 		return NULL;
 
@@ -293,7 +293,7 @@ static int hid_add_field(struct hid_parser *parser, unsigned report_type, unsign
 	offset = report->size;
 	report->size += parser->global.report_size * parser->global.report_count;
 
-	if (IS_ENABLED(CONFIG_UHID) && parser->device->ll_driver == &uhid_hid_driver)
+	if (IS_BUILTIN(CONFIG_UHID) && parser->device->ll_driver == &uhid_hid_driver)
 		max_buffer_size = UHID_DATA_MAX;
 
 	/* Total size check: Allow for possible report index byte */
@@ -667,7 +667,7 @@ static void hid_free_report(struct hid_report *report)
 	kfree(report->field_entries);
 
 	for (n = 0; n < report->maxfield; n++)
-		kfree(report->field[n]);
+		kvfree(report->field[n]);
 	kfree(report);
 }
 
@@ -1445,7 +1445,6 @@ static void implement(const struct hid_device *hid, u8 *report,
 			hid_warn(hid,
 				 "%s() called with too large value %d (n: %d)! (%s)\n",
 				 __func__, value, n, current->comm);
-			WARN_ON(1);
 			value &= m;
 		}
 	}
@@ -1873,7 +1872,7 @@ u8 *hid_alloc_report_buf(struct hid_report *report, gfp_t flags)
 
 	u32 len = hid_report_len(report) + 7;
 
-	return kmalloc(len, flags);
+	return kzalloc(len, flags);
 }
 EXPORT_SYMBOL_GPL(hid_alloc_report_buf);
 
@@ -1987,7 +1986,7 @@ int hid_report_raw_event(struct hid_device *hid, enum hid_report_type type, u8 *
 
 	rsize = hid_compute_report_size(report);
 
-	if (IS_ENABLED(CONFIG_UHID) && hid->ll_driver == &uhid_hid_driver)
+	if (IS_BUILTIN(CONFIG_UHID) && hid->ll_driver == &uhid_hid_driver)
 		max_buffer_size = UHID_DATA_MAX;
 
 	if (report_enum->numbered && rsize >= max_buffer_size)
@@ -2398,7 +2397,7 @@ int hid_hw_raw_request(struct hid_device *hdev,
 {
 	unsigned int max_buffer_size = HID_MAX_BUFFER_SIZE;
 
-	if (IS_ENABLED(CONFIG_UHID) && hdev->ll_driver == &uhid_hid_driver)
+	if (IS_BUILTIN(CONFIG_UHID) && hdev->ll_driver == &uhid_hid_driver)
 		max_buffer_size = UHID_DATA_MAX;
 
 	if (len < 1 || len > max_buffer_size || !buf)
@@ -2422,7 +2421,7 @@ int hid_hw_output_report(struct hid_device *hdev, __u8 *buf, size_t len)
 {
 	unsigned int max_buffer_size = HID_MAX_BUFFER_SIZE;
 
-	if (IS_ENABLED(CONFIG_UHID) && hdev->ll_driver == &uhid_hid_driver)
+	if (IS_BUILTIN(CONFIG_UHID) && hdev->ll_driver == &uhid_hid_driver)
 		max_buffer_size = UHID_DATA_MAX;
 
 	if (len < 1 || len > max_buffer_size || !buf)

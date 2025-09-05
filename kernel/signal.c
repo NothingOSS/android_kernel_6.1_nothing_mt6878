@@ -430,7 +430,8 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t gfp_flags,
 	 */
 	rcu_read_lock();
 	ucounts = task_ucounts(t);
-	sigpending = inc_rlimit_get_ucounts(ucounts, UCOUNT_RLIMIT_SIGPENDING);
+	sigpending = inc_rlimit_get_ucounts(ucounts, UCOUNT_RLIMIT_SIGPENDING,
+					    override_rlimit);
 	rcu_read_unlock();
 	if (!sigpending)
 		return NULL;
@@ -2581,6 +2582,14 @@ static void do_freezer_trap(void)
 	spin_unlock_irq(&current->sighand->siglock);
 	cgroup_enter_frozen();
 	schedule();
+
+	/*
+	 * We could've been woken by task_work, run it to clear
+	 * TIF_NOTIFY_SIGNAL. The caller will retry if necessary.
+	 */
+	clear_notify_signal();
+	if (unlikely(task_work_pending(current)))
+		task_work_run();
 }
 
 static int ptrace_signal(int signr, kernel_siginfo_t *info, enum pid_type type)
@@ -4707,7 +4716,7 @@ __weak const char *arch_vma_name(struct vm_area_struct *vma)
 	return NULL;
 }
 #if IS_ENABLED(CONFIG_MTK_MBRAINK_EXPORT_DEPENDED)
-EXPORT_SYMBOL(arch_vma_name);
+EXPORT_SYMBOL_GPL(arch_vma_name);
 #endif
 
 static inline void siginfo_buildtime_checks(void)

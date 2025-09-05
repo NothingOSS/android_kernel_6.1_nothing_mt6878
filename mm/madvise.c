@@ -103,6 +103,7 @@ struct anon_vma_name *anon_vma_name(struct vm_area_struct *vma)
 
 	return vma->anon_name;
 }
+EXPORT_SYMBOL_GPL(anon_vma_name);
 
 /* mmap_lock should be write-locked */
 static int replace_anon_vma_name(struct vm_area_struct *vma,
@@ -413,6 +414,7 @@ static int madvise_cold_or_pageout_pte_range(pmd_t *pmd,
 			tlb_remove_pmd_tlb_entry(tlb, pmd, addr);
 		}
 
+		trace_android_vh_madvise_cold_or_pageout_page(pageout, page);
 		ClearPageReferenced(page);
 		test_and_clear_page_young(page);
 		if (pageout) {
@@ -449,7 +451,8 @@ regular_page:
 
 		if (!pte_present(ptent)) {
 			entry = pte_to_swp_entry(ptent);
-			trace_android_vh_madvise_pageout_swap_entry(entry,
+			if (!is_migration_entry(entry))
+				trace_android_vh_madvise_pageout_swap_entry(entry,
 					swp_swapcount(entry));
 			continue;
 		}
@@ -519,6 +522,7 @@ regular_page:
 		 * As a side effect, it makes confuse idle-page tracking
 		 * because they will miss recent referenced history.
 		 */
+		trace_android_vh_madvise_cold_or_pageout_page(pageout, page);
 		ClearPageReferenced(page);
 		test_and_clear_page_young(page);
 		if (pageout) {

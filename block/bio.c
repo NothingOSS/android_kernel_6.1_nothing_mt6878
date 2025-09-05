@@ -1122,7 +1122,8 @@ void __bio_release_pages(struct bio *bio, bool mark_dirty)
 			folio_mark_dirty(fi.folio);
 			folio_unlock(fi.folio);
 		}
-		nr_pages = (fi.offset + fi.length - 1) / PAGE_SIZE - fi.offset / PAGE_SIZE + 1;
+		nr_pages = (fi.offset + fi.length - 1) / PAGE_SIZE -
+			   fi.offset / PAGE_SIZE + 1;
 		folio_put_refs(fi.folio, nr_pages);
 	}
 }
