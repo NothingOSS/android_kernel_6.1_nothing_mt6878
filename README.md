@@ -1,18 +1,6 @@
-# CMF by NOTHING Phone 1 Release Note
-1. OS 3.2 (Galaga-V3.2-250425-1517)
+# CMF by NOTHING Phone (3a) Lite Release Note
+1. OS 3.5 (Galaxian-V3.5-251029-1642)
   - First release opensource of kernel and kernel modules
-
-2. OS 3.2 (Galaga-V3.2-250526-1427)
-  - No update
-
-3. OS 3.2 (Galaga-V3.2-250605-1102)
-  - No update
-
-4. OS 3.2 (Galaga-V3.2-250616-1258)
-  - No update
-
-5. OS 3.2 (Galaga-V3.2-250715-1813)
-  - No update
 
 # How do I submit patches to Android Common Kernels
 
