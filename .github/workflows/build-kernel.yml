@@ -18,9 +18,9 @@ jobs:
           fetch-depth: 1
 
       - name: Build with KernelSU-Next
-        uses: dabao1955/kernel_build_action@main
+        uses: dabao1955/kernel_build_action@v1   # ← было @main, теперь v1
         with:
-          kernel-url: .                  # ← важно! точка значит "текущий репозиторий"
+          kernel-url: .
           kernel-branch: mt6878/Galaga/v
           defconfig: gki_defconfig
           ksu: true
