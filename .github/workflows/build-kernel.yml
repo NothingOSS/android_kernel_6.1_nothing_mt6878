@@ -1,0 +1,29 @@
+name: Build Kernel with KSU-Next
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout kernel
+        uses: actions/checkout@v4
+        with:
+          ref: mt6878/Galaga/v   # ← вот сюда точный branch
+          submodules: 'recursive'
+
+      - name: Build with KernelSU-Next
+        uses: dabao1955/kernel_build_action@main
+        with:
+          kernel-url: ${{ github.repository }}
+          kernel-branch: mt6878/Galaga/v
+          defconfig: gki_defconfig
+          ksu: true
+          ksu-other: true
+          ksu-url: https://github.com/KernelSU-Next/KernelSU-Next
+          clang: aosp
+          anykernel3: true
