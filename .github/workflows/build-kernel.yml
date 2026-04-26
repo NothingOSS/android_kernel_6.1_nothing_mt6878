@@ -17,14 +17,17 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 1
 
-      - name: Build with KernelSU-Next
-        uses: dabao1955/kernel_build_action@v1.10.0   # ← было @main, теперь v1
+      - name: Setup KernelSU-Next
+        run: |
+          echo "=== Patching KernelSU-Next ==="
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -   # ← исправленный путь
+
+      - name: Build Kernel
+        uses: dabao1955/kernel_build_action@v1.10.0
         with:
           kernel-url: .
           kernel-branch: mt6878/Galaga/v
           defconfig: gki_defconfig
-          ksu: true
-          ksu-other: true
-          ksu-url: https://github.com/KernelSU-Next/KernelSU-Next
           clang: aosp
           anykernel3: true
+          # ksu и ksu-other убираем, потому что патчим вручную выше
