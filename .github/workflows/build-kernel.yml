@@ -10,16 +10,17 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout kernel
+      - name: Checkout kernel source
         uses: actions/checkout@v4
         with:
-          ref: mt6878/Galaga/v   # ← вот сюда точный branch
+          ref: mt6878/Galaga/v
           submodules: 'recursive'
+          fetch-depth: 1
 
       - name: Build with KernelSU-Next
         uses: dabao1955/kernel_build_action@main
         with:
-          kernel-url: ${{ github.repository }}
+          kernel-url: .                  # ← важно! точка значит "текущий репозиторий"
           kernel-branch: mt6878/Galaga/v
           defconfig: gki_defconfig
           ksu: true
