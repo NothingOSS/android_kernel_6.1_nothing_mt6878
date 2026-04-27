@@ -20,18 +20,12 @@ jobs:
       - name: Setup KernelSU-Next
         run: |
           echo "=== Patching KernelSU-Next ==="
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -   # ← исправленный путь
-
-      - name: Setup build environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64 python3
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
 
       - name: Build Kernel
         uses: dabao1955/kernel_build_action@main
         with:
           kernel-url: .
-          # kernel-branch убираем полностью — ты уже на нужном ref из checkout
           config: gki_defconfig
           arch: arm64
           aosp-clang: true
