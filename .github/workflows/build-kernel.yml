@@ -29,4 +29,6 @@ jobs:
           config: gki_defconfig
           arch: arm64
           aosp-clang: true
+          aosp-gcc: true
           anykernel3: true
+
