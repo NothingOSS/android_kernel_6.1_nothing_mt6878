@@ -26,7 +26,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
-            python3 python3-pip git ccache curl unzip
+            python3 python3-pip git ccache curl unzip \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
 
       - name: Download Clang 17 (AOSP-style, рабочая версия для 6.1)
         run: |
