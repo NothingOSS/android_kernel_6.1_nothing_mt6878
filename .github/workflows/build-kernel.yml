@@ -1,4 +1,4 @@
-name: Build Kernel with KSU-Next
+name: Build Kernel with KSU-Next (Manual)
 
 on:
   workflow_dispatch:
@@ -22,14 +22,45 @@ jobs:
           echo "=== Patching KernelSU-Next ==="
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
 
-      - name: Build Kernel
-        uses: dabao1955/kernel_build_action@main
-        with:
-          kernel-url: .
-          config: gki_defconfig
-          arch: arm64
-          aosp-clang: false
-          aosp-gcc: false
-          clang: android-ndk
-          anykernel3: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
+            python3 python3-pip git ccache curl unzip
 
+      - name: Download Clang 17 (AOSP-style, рабочая версия для 6.1)
+        run: |
+          mkdir -p clang && cd clang
+          curl -L -o clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz
+          tar -xzf clang.tar.gz
+          echo "Clang path: $(pwd)"
+          cd ..
+
+      - name: Build Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CLANG_PATH=$GITHUB_WORKSPACE/clang
+          export PATH=$CLANG_PATH/bin:$PATH
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+
+          echo "=== Making defconfig ==="
+          make -j$(nproc) O=out gki_defconfig
+
+          echo "=== Starting build ==="
+          make -j$(nproc) O=out \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu-
+
+      - name: Package with AnyKernel3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-AnyKernel3
+          path: out/arch/arm64/boot/*Image*
