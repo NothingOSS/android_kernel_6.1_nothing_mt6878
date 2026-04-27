@@ -28,7 +28,8 @@ jobs:
           kernel-url: .
           config: gki_defconfig
           arch: arm64
-          aosp-clang: true
-          aosp-gcc: true
+          aosp-clang: false
+          aosp-gcc: false
+          clang: android-ndk
           anykernel3: true
 
