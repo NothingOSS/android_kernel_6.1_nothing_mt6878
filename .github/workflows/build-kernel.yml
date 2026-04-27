@@ -28,10 +28,11 @@ jobs:
           sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64 python3
 
       - name: Build Kernel
-        run: |
-          echo "=== Starting build ==="
-          export ARCH=arm64
-          export SUBARCH=arm64
-          # если нужен clang из AOSP — скачай или используй тот, что в action'е обычно ставит
-          make -j$(nproc) gki_defconfig
-          make -j$(nproc)
+        uses: dabao1955/kernel_build_action@main
+        with:
+          kernel-url: .
+          # kernel-branch убираем полностью — ты уже на нужном ref из checkout
+          config: gki_defconfig
+          arch: arm64
+          aosp-clang: true
+          anykernel3: true
