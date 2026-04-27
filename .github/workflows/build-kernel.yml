@@ -22,12 +22,16 @@ jobs:
           echo "=== Patching KernelSU-Next ==="
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -   # ← исправленный путь
 
+      - name: Setup build environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64 python3
+
       - name: Build Kernel
-        uses: dabao1955/kernel_build_action@v1.10.0
-        with:
-          kernel-url: .
-          kernel-branch: mt6878/Galaga/v
-          defconfig: gki_defconfig
-          clang: aosp
-          anykernel3: true
-          # ksu и ksu-other убираем, потому что патчим вручную выше
+        run: |
+          echo "=== Starting build ==="
+          export ARCH=arm64
+          export SUBARCH=arm64
+          # если нужен clang из AOSP — скачай или используй тот, что в action'е обычно ставит
+          make -j$(nproc) gki_defconfig
+          make -j$(nproc)
