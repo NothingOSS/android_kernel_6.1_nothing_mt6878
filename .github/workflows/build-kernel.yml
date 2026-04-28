@@ -19,8 +19,20 @@ jobs:
 
       - name: Setup KernelSU-Next
         run: |
-          echo "=== Patching KernelSU-Next (stable вместо dev) ==="
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
+          echo "=== Applying KSU-Next manually (less invasive) ==="
+    
+          # Клонируем
+          git clone --depth 1 https://github.com/KernelSU-Next/KernelSU-Next.git -b next ksu-next
+      
+          # Применяем патч через их скрипт, но из папки kernel
+          cp -r ksu-next/kernel/drivers .
+          cp -r ksu-next/kernel/include .
+      
+          # Добавляем в Kconfig и Makefile вручную (самое безопасное)
+          echo "source \"drivers/ksu/Kconfig\"" >> drivers/Kconfig
+          echo "obj-y += ksu/" >> drivers/Makefile
+      
+          echo "=== KSU-Next files copied ==="
 
       - name: Fix headers install issue
         run: |
