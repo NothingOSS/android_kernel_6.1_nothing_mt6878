@@ -17,28 +17,22 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 1
 
-      - name: Setup KernelSU-Next
+      - name: Setup KernelSU-Next (manual, safer)
         run: |
-          echo "=== Applying KSU-Next manually (less invasive) ==="
-    
-          # Клонируем
-          git clone --depth 1 https://github.com/KernelSU-Next/KernelSU-Next.git -b next ksu-next
-      
-          # Применяем патч через их скрипт, но из папки kernel
-          cp -r ksu-next/kernel/drivers .
-          cp -r ksu-next/kernel/include .
-      
-          # Добавляем в Kconfig и Makefile вручную (самое безопасное)
-          echo "source \"drivers/ksu/Kconfig\"" >> drivers/Kconfig
-          echo "obj-y += ksu/" >> drivers/Makefile
-      
-          echo "=== KSU-Next files copied ==="
+          echo "=== Cloning KSU-Next (dev branch) ==="
+          git clone --depth=1 https://github.com/KernelSU-Next/KernelSU-Next.git -b dev ksu-next
 
-      - name: Fix headers install issue
-        run: |
-          echo "=== Отключаем headers_install, чтобы избежать HDRINST ошибок ==="
-          sed -i '/headers_install/d' Makefile
-          sed -i '/PHONY.*headers_install/d' Makefile || true
+          echo "=== Copying KSU-Next files ==="
+          cp -r ksu-next/kernel/drivers/ksu drivers/ || echo "Warning: failed to copy drivers/ksu"
+
+          # Добавляем в Kconfig и Makefile
+          echo "" >> drivers/Kconfig
+          echo "source \"drivers/ksu/Kconfig\"" >> drivers/Kconfig
+
+          echo "" >> drivers/Makefile
+          echo "obj-y += ksu/" >> drivers/Makefile
+
+          echo "=== KSU-Next applied manually ==="
 
       - name: Install dependencies
         run: |
@@ -60,20 +54,9 @@ jobs:
           
           make O=out ARCH=arm64 gki_defconfig
 
-          # Проверяем наличие 16k fragment и применяем только если он есть
-          if [ -f arch/arm64/configs/16k_gki.fragment ]; then
-            echo "=== Applying 16k_gki.fragment ==="
-            scripts/kconfig/merge_config.sh -m -O out/ \
-              out/.config \
-              arch/arm64/configs/16k_gki.fragment
-          else
-            echo "=== 16k_gki.fragment не найден, пропускаем ==="
-          fi
-
-          # Включаем KSU
           ./scripts/config --file out/.config -e KSU
 
-          echo "=== Проверка конфига KSU ==="
+          echo "=== Проверка KSU в конфиге ==="
           grep -E "CONFIG_KSU" out/.config || echo "WARNING: CONFIG_KSU не найден!"
 
       - name: Build Kernel
