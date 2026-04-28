@@ -19,8 +19,14 @@ jobs:
 
       - name: Setup KernelSU-Next
         run: |
-          echo "=== Patching KernelSU-Next ==="
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s dev
+          echo "=== Patching KernelSU-Next (stable вместо dev) ==="
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
+
+      - name: Fix headers install issue
+        run: |
+          echo "=== Отключаем headers_install, чтобы избежать HDRINST ошибок ==="
+          sed -i '/headers_install/d' Makefile
+          sed -i '/PHONY.*headers_install/d' Makefile || true
 
       - name: Install dependencies
         run: |
