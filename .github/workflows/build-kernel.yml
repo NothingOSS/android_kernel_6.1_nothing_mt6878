@@ -1,4 +1,4 @@
-name: Build Kernel with KSU-Next (Manual)
+name: Build Kernel with KSU-Next
 
 on:
   workflow_dispatch:
@@ -20,17 +20,15 @@ jobs:
       - name: Setup KernelSU-Next
         run: |
           echo "=== Patching KernelSU-Next ==="
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s dev
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
-            python3 python3-pip git ccache curl unzip \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
+            python3 python3-pip git ccache curl unzip
 
-      - name: Download Clang 17 (AOSP-style, рабочая версия для 6.1)
+      - name: Download Clang 17
         run: |
           mkdir -p clang && cd clang
           curl -L -o clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz
@@ -38,34 +36,43 @@ jobs:
           echo "Clang path: $(pwd)"
           cd ..
 
+      - name: Prepare defconfig with KSU
+        run: |
+          echo "=== Making gki_defconfig + 16k fragment ==="
+          export ARCH=arm64
+          
+          # Основной дефконфиг
+          make O=out ARCH=arm64 gki_defconfig
+
+          # Применяем важный фрагмент для MT6878
+          scripts/kconfig/merge_config.sh -m -O out/ \
+            out/.config \
+            arch/arm64/configs/16k_gki.fragment
+
+          # Принудительно включаем KSU-Next
+          ./scripts/config --file out/.config -e KSU
+          # ./scripts/config --file out/.config -d KSU_DEBUG   # раскомментируй, если дебаг не нужен
+
+          echo "=== Проверка KSU в конфиге ==="
+          grep -E "CONFIG_KSU|CONFIG_KSU_NEXT" out/.config || echo "KSU не найден в конфиге!"
+
       - name: Build Kernel
         run: |
           export ARCH=arm64
-          export SUBARCH=arm64
-
-          # Пути к clang (твой скачанный)
           export CLANG_PATH=$GITHUB_WORKSPACE/clang
           export PATH=$CLANG_PATH/bin:$PATH
 
-          # Кросс-компиляторы
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-
-          echo "=== Making defconfig ==="
-          make -j$(nproc) O=out gki_defconfig
-
-          echo "=== Starting build ==="
+          echo "=== Starting kernel build ==="
           make -j$(nproc) O=out \
             CC=clang \
             LD=ld.lld \
             LLVM=1 \
             LLVM_IAS=1 \
             CLANG_TRIPLE=aarch64-linux-gnu- \
-            CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+            CROSS_COMPILE=aarch64-linux-gnu-
 
-      - name: Package with AnyKernel3
+      - name: Upload AnyKernel3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-AnyKernel3
+          name: Kernel-KSU-Next-AnyKernel3
           path: out/arch/arm64/boot/*Image*
