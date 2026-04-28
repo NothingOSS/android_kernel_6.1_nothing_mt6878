@@ -33,28 +33,30 @@ jobs:
           mkdir -p clang && cd clang
           curl -L -o clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz
           tar -xzf clang.tar.gz
-          echo "Clang path: $(pwd)"
           cd ..
 
       - name: Prepare defconfig with KSU
         run: |
-          echo "=== Making gki_defconfig + 16k fragment ==="
+          echo "=== Making gki_defconfig ==="
           export ARCH=arm64
           
-          # Основной дефконфиг
           make O=out ARCH=arm64 gki_defconfig
 
-          # Применяем важный фрагмент для MT6878
-          scripts/kconfig/merge_config.sh -m -O out/ \
-            out/.config \
-            arch/arm64/configs/16k_gki.fragment
+          # Проверяем наличие 16k fragment и применяем только если он есть
+          if [ -f arch/arm64/configs/16k_gki.fragment ]; then
+            echo "=== Applying 16k_gki.fragment ==="
+            scripts/kconfig/merge_config.sh -m -O out/ \
+              out/.config \
+              arch/arm64/configs/16k_gki.fragment
+          else
+            echo "=== 16k_gki.fragment не найден, пропускаем ==="
+          fi
 
-          # Принудительно включаем KSU-Next
+          # Включаем KSU
           ./scripts/config --file out/.config -e KSU
-          # ./scripts/config --file out/.config -d KSU_DEBUG   # раскомментируй, если дебаг не нужен
 
-          echo "=== Проверка KSU в конфиге ==="
-          grep -E "CONFIG_KSU|CONFIG_KSU_NEXT" out/.config || echo "KSU не найден в конфиге!"
+          echo "=== Проверка конфига KSU ==="
+          grep -E "CONFIG_KSU" out/.config || echo "WARNING: CONFIG_KSU не найден!"
 
       - name: Build Kernel
         run: |
@@ -62,7 +64,7 @@ jobs:
           export CLANG_PATH=$GITHUB_WORKSPACE/clang
           export PATH=$CLANG_PATH/bin:$PATH
 
-          echo "=== Starting kernel build ==="
+          echo "=== Starting build ==="
           make -j$(nproc) O=out \
             CC=clang \
             LD=ld.lld \
@@ -71,7 +73,7 @@ jobs:
             CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu-
 
-      - name: Upload AnyKernel3 artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Kernel-KSU-Next-AnyKernel3
