@@ -1,0 +1,81 @@
+name: Build Kernel with KSU-Next
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+        with:
+          ref: mt6878/Galaga/v
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Setup KernelSU-Next (manual, safer)
+        run: |
+          echo "=== Cloning KSU-Next (dev branch) ==="
+          git clone --depth=1 https://github.com/KernelSU-Next/KernelSU-Next.git -b dev ksu-next
+
+          echo "=== Copying KSU-Next files ==="
+          cp -r ksu-next/kernel/drivers/ksu drivers/ || echo "Warning: failed to copy drivers/ksu"
+
+          # Добавляем в Kconfig и Makefile
+          echo "" >> drivers/Kconfig
+          echo "source \"drivers/ksu/Kconfig\"" >> drivers/Kconfig
+
+          echo "" >> drivers/Makefile
+          echo "obj-y += ksu/" >> drivers/Makefile
+
+          echo "=== KSU-Next applied manually ==="
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev \
+            python3 python3-pip git ccache curl unzip
+
+      - name: Download Clang 17
+        run: |
+          mkdir -p clang && cd clang
+          curl -L -o clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz
+          tar -xzf clang.tar.gz
+          cd ..
+
+      - name: Prepare defconfig with KSU
+        run: |
+          echo "=== Making gki_defconfig ==="
+          export ARCH=arm64
+          
+          make O=out ARCH=arm64 gki_defconfig
+
+          ./scripts/config --file out/.config -e KSU
+
+          echo "=== Проверка KSU в конфиге ==="
+          grep -E "CONFIG_KSU" out/.config || echo "WARNING: CONFIG_KSU не найден!"
+
+      - name: Build Kernel
+        run: |
+          export ARCH=arm64
+          export CLANG_PATH=$GITHUB_WORKSPACE/clang
+          export PATH=$CLANG_PATH/bin:$PATH
+
+          echo "=== Starting build ==="
+          make -j$(nproc) O=out \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu-
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-KSU-Next-AnyKernel3
+          path: out/arch/arm64/boot/*Image*
