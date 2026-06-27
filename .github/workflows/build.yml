@@ -1,0 +1,131 @@
+name: CMF Phone 1 MT6878 KernelSU Next SUSFS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          bc bison flex \
+          build-essential \
+          gcc-aarch64-linux-gnu \
+          libssl-dev \
+          libelf-dev \
+          cpio \
+          git \
+          python3 \
+          unzip
+
+    - name: Detect kernel directory
+      run: |
+        if [ -f u/Makefile ]; then
+          echo "KERNEL_DIR=u" >> $GITHUB_ENV
+        else
+          echo "KERNEL_DIR=." >> $GITHUB_ENV
+        fi
+
+
+    - name: Clone MT6878 modules
+      run: |
+
+        git clone --depth=1 \
+        -b mt6878/Tetris/16b \
+        https://github.com/NothingOSS/android_kernel_modules_nothing_mt6878 \
+        modules
+
+        git clone --depth=1 \
+        -b mt6878/Tetris/16b \
+        https://github.com/NothingOSS/android_kernel_device_modules_6.1_nothing_mt6878 \
+        device_modules
+
+
+    - name: Install KernelSU Next
+      run: |
+
+        cd $KERNEL_DIR
+
+        curl -LSs \
+        https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
+        | bash
+
+
+    - name: Install SUSFS
+      run: |
+
+        cd $KERNEL_DIR
+
+        git clone \
+        https://github.com/sidex15/susfs4ksu \
+        susfs
+
+        cp -r susfs/kernel/* .
+
+
+    - name: Configure kernel
+      run: |
+
+        cd $KERNEL_DIR
+
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out defconfig
+
+
+    - name: Enable KSU + SUSFS
+      run: |
+
+        cd $KERNEL_DIR/out
+
+        ../scripts/config --enable CONFIG_KSU
+        ../scripts/config --enable CONFIG_KSU_MANUAL_HOOK
+
+        ../scripts/config --enable CONFIG_KSU_SUSFS
+
+
+    - name: Build kernel
+      run: |
+
+        cd $KERNEL_DIR
+
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out -j$(nproc)
+
+
+    - name: Prepare AnyKernel3
+      run: |
+
+        git clone \
+        https://github.com/KernelSU-Next/AnyKernel3.git \
+        AnyKernel3
+
+        cp $KERNEL_DIR/out/arch/arm64/boot/Image* \
+        AnyKernel3/
+
+
+    - name: Create flash zip
+      run: |
+
+        cd AnyKernel3
+
+        zip -r \
+        ../CMF1-KernelSU-SUSFS.zip .
+
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: CMF1-KernelSU-SUSFS
+        path: CMF1-KernelSU-SUSFS.zip

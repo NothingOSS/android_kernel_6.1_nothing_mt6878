@@ -1,0 +1,95 @@
+
+name: CMF Phone 1 MT6878 KernelSU Next Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+    - name: Checkout kernel
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          bc bison flex \
+          build-essential \
+          gcc-aarch64-linux-gnu \
+          libssl-dev \
+          libelf-dev \
+          cpio \
+          python3 \
+          unzip \
+          git
+
+    - name: Locate kernel directory
+      run: |
+        if [ -f u/Makefile ]; then
+          echo "KERNEL_DIR=u" >> $GITHUB_ENV
+        else
+          echo "KERNEL_DIR=." >> $GITHUB_ENV
+        fi
+
+    - name: Clone MT6878 kernel modules
+      run: |
+        git clone --depth=1 \
+        -b mt6878/Tetris/16b \
+        https://github.com/NothingOSS/android_kernel_modules_nothing_mt6878 \
+        kernel_modules
+
+        git clone --depth=1 \
+        -b mt6878/Tetris/16b \
+        https://github.com/NothingOSS/android_kernel_device_modules_6.1_nothing_mt6878 \
+        device_modules
+
+    - name: Install KernelSU Next
+      run: |
+        cd $KERNEL_DIR
+
+        curl -LSs \
+        https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
+        | bash
+
+    - name: Configure kernel
+      run: |
+        cd $KERNEL_DIR
+
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out defconfig
+
+    - name: Enable KernelSU
+      run: |
+        cd $KERNEL_DIR/out
+
+        ../scripts/config --enable CONFIG_KSU
+        ../scripts/config --enable CONFIG_KSU_MANUAL_HOOK
+
+    - name: Build kernel
+      run: |
+        cd $KERNEL_DIR
+
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out -j$(nproc)
+
+    - name: Collect kernel output
+      run: |
+        mkdir output
+
+        cp $KERNEL_DIR/out/arch/arm64/boot/Image* output/ || true
+
+    - name: Upload kernel
+      uses: actions/upload-artifact@v4
+      with:
+        name: CMF-Phone1-KernelSU-Next
+        path: output
