@@ -17,6 +17,9 @@
 5. OS 4.1 (Galaga-B4.1-260812-1729)
   - No update
 
+6. OS 4.1 (Galaga-B4.1-260928-1137)
+  - No update
+
 
 # How do I submit patches to Android Common Kernels
 
