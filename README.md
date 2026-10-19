@@ -17,6 +17,9 @@
 5. OS 4.1 (Tetris-B4.1-260812-1726)
   - No update
 
+6. OS 4.1 (Tetris-B4.1-260928-1140)
+  - No update
+
 
 # How do I submit patches to Android Common Kernels
 
